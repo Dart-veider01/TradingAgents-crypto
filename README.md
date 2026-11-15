@@ -1,12 +1,14 @@
 <p align="center">
-  <img src="assets/TauricResearch.png" width="320" alt="TradingAgents">
+  <img src="assets/TauricResearch.png" width="280" alt="TradingAgents">
+  &nbsp;&nbsp;&nbsp;
+  <img src="assets/byttrade/logo_byt.svg" width="96" alt="BYTtrade">
 </p>
 
 # TradingAgents Crypto
 
-Мультиагентный исследовательский стол для крипты. Аналитики, спор быков и медведей, риск и портфельный менеджер приходят к решению Buy / Hold / Sell. Этот форк отправляет решение на биржу через [bytx](https://github.com/byttrade/bytx) от [BYTtrade](https://byttrade.com).
+A multi-agent research desk for crypto. Analysts, a bull and bear debate, risk, and a portfolio manager land on Buy, Hold, or Sell. This fork sends that decision to an exchange through [bytx](https://github.com/byttrade/bytx) by [BYTtrade](https://byttrade.com).
 
-Английская документация исходного фреймворка сохранена ниже.
+**English** | [Русский](docs/README.ru.md) | [中文](docs/README.zh-CN.md) | [Español](docs/README.es.md) | [Português](docs/README.pt-BR.md) | [日本語](docs/README.ja.md) | [한국어](docs/README.ko.md) | [Türkçe](docs/README.tr.md)
 
 <p align="center">
   <a href="https://github.com/TauricResearch/TradingAgents"><img alt="Upstream" src="https://img.shields.io/badge/upstream-TauricResearch%2FTradingAgents-111"></a>
@@ -14,54 +16,54 @@
   <a href="https://arxiv.org/abs/2412.20138"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2412.20138-B31B1B?logo=arxiv"></a>
 </p>
 
-## Два слоя
+## Two layers
 
-Исследование остаётся у TradingAgents. Исполнение делает bytx: один вызов на Binance, Bybit, OKX, BingX, KuCoin, Bitget и другие площадки. По умолчанию привод выключен, а если его включить, ордер идёт на demo, пока вы сами не переключите live.
+Research stays with TradingAgents. Execution is bytx: one call on Binance, Bybit, OKX, BingX, KuCoin, Bitget, and more. The driver is off by default. When you turn it on, orders go to the exchange demo until you choose live.
 
 <p align="center">
-  <img src="assets/schema.png" width="100%" alt="Схема агентов TradingAgents">
+  <img src="assets/schema.png" width="100%" alt="TradingAgents agent desk">
 </p>
 
 <p align="center">
-  <img src="assets/byttrade/one_api.gif" width="100%" alt="Один API bytx на все биржи">
+  <img src="assets/byttrade/one_api.gif" width="100%" alt="One bytx API for every exchange">
 </p>
 
-| | |
+| Research | Execution |
 |---|---|
-| Рынок, новости Yahoo, Reddit и StockTwits | Рыночный или post-only лимитный ордер |
-| Buy / Overweight открывают long | Underweight / Sell закрывают позицию |
-| Hold и REVIEW ничего не отправляют | Акции биржа не получает, только крипта |
-| Стоп и тейк из решения агентов | OKX, KuCoin, Bitget и BloFin просят passphrase |
+| Yahoo prices and news, Reddit, StockTwits | Market order, or a post-only limit near the market |
+| Buy and Overweight open a long | Underweight and Sell close the position |
+| Hold and REVIEW send nothing | Equities are skipped; only crypto is sent |
+| Stop and target come from the agents | OKX, KuCoin, Bitget, and BloFin need a passphrase |
 
-Картинки схемы, аналитиков и риска взяты из [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents). Кадры исполнения взяты из [byttrade/bytx](https://github.com/byttrade/bytx).
+Desk diagrams are from [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents). Execution frames and the BYT mark are from [BYTtrade](https://byttrade.com) and [byttrade/bytx](https://github.com/byttrade/bytx).
 
-## Кто принимает решение
+## Who decides
 
 <p align="center">
-  <img src="assets/analyst.png" width="48%" alt="Команда аналитиков">
-  <img src="assets/researcher.png" width="48%" alt="Исследователи">
+  <img src="assets/analyst.png" width="48%" alt="Analyst team">
+  <img src="assets/researcher.png" width="48%" alt="Researchers">
 </p>
 
 <p align="center">
-  <img src="assets/trader.png" width="48%" alt="Трейдер">
-  <img src="assets/risk.png" width="48%" alt="Риск и портфельный менеджер">
+  <img src="assets/trader.png" width="48%" alt="Trader">
+  <img src="assets/risk.png" width="48%" alt="Risk and portfolio manager">
 </p>
 
-Аналитики читают свечи, индикаторы и новости. Быки и медведи спорят. Трейдер предлагает сделку. Портфельный менеджер ставит итоговый рейтинг. Для крипты фундаментальный аналитик не запускается: у монеты нет отчётности компании.
+Analysts read candles, indicators, and news. Bulls and bears debate. The trader proposes a transaction. The portfolio manager sets the final rating. Crypto runs skip the fundamentals analyst: a coin has no company filings.
 
-## Как ордер доходит до биржи
+## How the order reaches the exchange
 
-Лимит ближе 20 базисных пунктов к рынку уходит как post-only и не пересекает спред. Дальняя лимитка остаётся обычной. Без цены входа ордер рыночный. Размер по умолчанию 100 USDT и поднимается до минимума биржи, но не больше чем в три раза.
+A limit within 20 basis points of the market is sent post-only, so it does not cross the spread. A limit farther away stays a normal limit. With no entry price the order is a market order. The default size is 100 USDT. It is raised to the venue minimum, and never more than three times the size you asked for.
 
 <p align="center">
-  <img src="assets/byttrade/order_book.gif" width="78%" alt="Стакан bytx">
+  <img src="assets/byttrade/order_book.gif" width="78%" alt="bytx order book">
 </p>
 
 <p align="center">
-  <img src="assets/byttrade/paper.gif" width="78%" alt="Paper trading bytx">
+  <img src="assets/byttrade/paper.gif" width="78%" alt="bytx paper trading">
 </p>
 
-## Запуск
+## Run
 
 ```bash
 pip install ".[bytx]"
@@ -77,7 +79,7 @@ TRADINGAGENTS_EXECUTION_DEMO=true
 TRADINGAGENTS_EXECUTION_NOTIONAL=100
 ```
 
-`BYTX_PASSWORD` нужен только OKX, KuCoin, Bitget и BloFin. Для Bybit и Binance достаточно ключа и секрета.
+`BYTX_PASSWORD` is the API passphrase. Only OKX, KuCoin, Bitget, and BloFin require it. Bybit and Binance need the key and the secret.
 
 ```bash
 tradingagents --ticker BTC-USD --execute
@@ -96,13 +98,13 @@ state, decision = ta.propagate("BTC-USD", "2026-11-14", asset_type="crypto")
 print(decision, state.get("execution_result"))
 ```
 
-Paper без ключей: `config["execution"]["paper"] = True`. Это не финансовый совет. На live можно потерять деньги.
+Paper trading needs no keys: `config["execution"]["paper"] = True`. This is not financial advice. Live trading can lose money.
 
 ---
 
-# Документация upstream
+# Upstream documentation
 
-Ниже исходное описание [TradingAgents](https://github.com/TauricResearch/TradingAgents) от Tauric Research.
+The rest of this page is the original [TradingAgents](https://github.com/TauricResearch/TradingAgents) documentation from Tauric Research.
 
 <p align="center">
   <img src="tradingagents/assets/tauric-logo.svg" width="60%" alt="Tauric Research">
