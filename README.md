@@ -1,4 +1,110 @@
 <p align="center">
+  <img src="assets/TauricResearch.png" width="320" alt="TradingAgents">
+</p>
+
+# TradingAgents Crypto
+
+Мультиагентный исследовательский стол для крипты. Аналитики, спор быков и медведей, риск и портфельный менеджер приходят к решению Buy / Hold / Sell. Этот форк отправляет решение на биржу через [bytx](https://github.com/byttrade/bytx) от [BYTtrade](https://byttrade.com).
+
+Английская документация исходного фреймворка сохранена ниже.
+
+<p align="center">
+  <a href="https://github.com/TauricResearch/TradingAgents"><img alt="Upstream" src="https://img.shields.io/badge/upstream-TauricResearch%2FTradingAgents-111"></a>
+  <a href="https://pypi.org/project/bytx/"><img alt="bytx" src="https://img.shields.io/pypi/v/bytx?label=bytx"></a>
+  <a href="https://arxiv.org/abs/2412.20138"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2412.20138-B31B1B?logo=arxiv"></a>
+</p>
+
+## Два слоя
+
+Исследование остаётся у TradingAgents. Исполнение делает bytx: один вызов на Binance, Bybit, OKX, BingX, KuCoin, Bitget и другие площадки. По умолчанию привод выключен, а если его включить, ордер идёт на demo, пока вы сами не переключите live.
+
+<p align="center">
+  <img src="assets/schema.png" width="100%" alt="Схема агентов TradingAgents">
+</p>
+
+<p align="center">
+  <img src="assets/byttrade/one_api.gif" width="100%" alt="Один API bytx на все биржи">
+</p>
+
+| | |
+|---|---|
+| Рынок, новости Yahoo, Reddit и StockTwits | Рыночный или post-only лимитный ордер |
+| Buy / Overweight открывают long | Underweight / Sell закрывают позицию |
+| Hold и REVIEW ничего не отправляют | Акции биржа не получает, только крипта |
+| Стоп и тейк из решения агентов | OKX, KuCoin, Bitget и BloFin просят passphrase |
+
+Картинки схемы, аналитиков и риска взяты из [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents). Кадры исполнения взяты из [byttrade/bytx](https://github.com/byttrade/bytx).
+
+## Кто принимает решение
+
+<p align="center">
+  <img src="assets/analyst.png" width="48%" alt="Команда аналитиков">
+  <img src="assets/researcher.png" width="48%" alt="Исследователи">
+</p>
+
+<p align="center">
+  <img src="assets/trader.png" width="48%" alt="Трейдер">
+  <img src="assets/risk.png" width="48%" alt="Риск и портфельный менеджер">
+</p>
+
+Аналитики читают свечи, индикаторы и новости. Быки и медведи спорят. Трейдер предлагает сделку. Портфельный менеджер ставит итоговый рейтинг. Для крипты фундаментальный аналитик не запускается: у монеты нет отчётности компании.
+
+## Как ордер доходит до биржи
+
+Лимит ближе 20 базисных пунктов к рынку уходит как post-only и не пересекает спред. Дальняя лимитка остаётся обычной. Без цены входа ордер рыночный. Размер по умолчанию 100 USDT и поднимается до минимума биржи, но не больше чем в три раза.
+
+<p align="center">
+  <img src="assets/byttrade/order_book.gif" width="78%" alt="Стакан bytx">
+</p>
+
+<p align="center">
+  <img src="assets/byttrade/paper.gif" width="78%" alt="Paper trading bytx">
+</p>
+
+## Запуск
+
+```bash
+pip install ".[bytx]"
+```
+
+```env
+BYTX_API_KEY=
+BYTX_SECRET=
+BYTX_PASSWORD=
+BYTX_EXCHANGE=bybit
+TRADINGAGENTS_EXECUTION_ENABLED=true
+TRADINGAGENTS_EXECUTION_DEMO=true
+TRADINGAGENTS_EXECUTION_NOTIONAL=100
+```
+
+`BYTX_PASSWORD` нужен только OKX, KuCoin, Bitget и BloFin. Для Bybit и Binance достаточно ключа и секрета.
+
+```bash
+tradingagents --ticker BTC-USD --execute
+```
+
+```python
+from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.graph.trading_graph import TradingAgentsGraph
+
+config = DEFAULT_CONFIG.copy()
+config["execution"]["enabled"] = True
+config["execution"]["demo"] = True
+
+ta = TradingAgentsGraph(debug=True, config=config)
+state, decision = ta.propagate("BTC-USD", "2026-11-14", asset_type="crypto")
+print(decision, state.get("execution_result"))
+```
+
+Paper без ключей: `config["execution"]["paper"] = True`. Это не финансовый совет. На live можно потерять деньги.
+
+---
+
+# Документация upstream
+
+Ниже исходное описание [TradingAgents](https://github.com/TauricResearch/TradingAgents) от Tauric Research.
+
+<p align="center">
   <img src="tradingagents/assets/tauric-logo.svg" width="60%" alt="Tauric Research">
 </p>
 
@@ -134,6 +240,12 @@ source .venv/bin/activate
 Install the package and its dependencies (`uv pip install .` with uv):
 ```bash
 pip install .
+```
+
+For **live / demo crypto execution** after a decision (bytx driver):
+```bash
+pip install ".[bytx]"
+# or: pip install bytx
 ```
 
 ### Docker
@@ -292,6 +404,36 @@ config["deep_think_llm"] = "claude-opus-5-5"
 A tier on its own provider uses that provider's key and default endpoint; set `quick_think_backend_url` or `deep_think_backend_url` for a local or relay endpoint. The `TRADINGAGENTS_DEEP_THINK_PROVIDER` and `TRADINGAGENTS_QUICK_THINK_PROVIDER` variables set them for the CLI, together with the tier's model variable.
 
 See `tradingagents/default_config.py` for all configuration options.
+
+### Live / demo execution (bytx)
+
+Upstream TradingAgents stops at a **Buy / Hold / Sell** decision. This fork can send that decision to a real exchange through [bytx](https://github.com/byttrade/bytx) (Binance, Bybit, OKX, …).
+
+```bash
+pip install ".[bytx]"
+```
+
+```env
+BYTX_API_KEY=...
+BYTX_SECRET=...
+BYTX_EXCHANGE=bybit
+TRADINGAGENTS_EXECUTION_ENABLED=true
+TRADINGAGENTS_EXECUTION_DEMO=true          # keep true until you mean live funds
+TRADINGAGENTS_EXECUTION_NOTIONAL=100
+```
+
+```python
+config = DEFAULT_CONFIG.copy()
+config["execution"]["enabled"] = True
+config["execution"]["demo"] = True
+config["execution"]["notional_usdt"] = 100
+
+ta = TradingAgentsGraph(debug=True, config=config)
+state, decision = ta.propagate("BTC-USD", "2026-11-14", asset_type="crypto")
+print(decision, state.get("execution_result"))
+```
+
+Or from the CLI: `tradingagents --ticker BTC-USD --execute` (still uses `demo=true` unless you turn it off). Equities are skipped; only crypto tickers are sent to the exchange. **Not financial advice — you can lose money.**
 
 ### Fundamentals as filed
 

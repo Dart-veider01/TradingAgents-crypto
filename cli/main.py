@@ -68,6 +68,13 @@ def analyze(
         None, "--html/--no-html",
         help="Save the report as one HTML page too, complete_report.html, without asking (default: yes)",
     ),
+    execute: bool | None = typer.Option(
+        None,
+        "--execute/--no-execute",
+        help="After analysis, send the decision to bytx (crypto). "
+        "Default is off; demo=true unless TRADINGAGENTS_EXECUTION_DEMO=false. "
+        "Needs BYTX_API_KEY / BYTX_SECRET (even for exchange demo).",
+    ),
 ):
     """Run an analysis. This is what a bare `tradingagents` does.
 
@@ -89,7 +96,10 @@ def analyze(
             raise typer.Exit(code=1) from None
 
     try:
-        flags = {"ticker": ticker, "date": date, "analysts": analysts, "save": save, "show": show, "html": html}
+        flags = {
+            "ticker": ticker, "date": date, "analysts": analysts,
+            "save": save, "show": show, "html": html, "execute": execute,
+        }
         run_analysis(checkpoint=checkpoint, portfolio=portfolio_context, flags=flags)
     except _NO_CONSOLE_ERRORS:
         # A terminal with no console buffer cannot host the interactive prompts.

@@ -8,9 +8,16 @@ from tradingagents.graph.trading_graph import TradingAgentsGraph
 # want a hard-coded value that should ignore the environment.
 config = DEFAULT_CONFIG.copy()
 
+# Optional: send the final crypto decision to bytx (demo by default).
+# Requires: pip install bytx  and BYTX_API_KEY / BYTX_SECRET in .env
+# config["execution"]["enabled"] = True
+# config["execution"]["demo"] = True
+# config["execution"]["exchange"] = "bybit"
+# config["execution"]["notional_usdt"] = 100
+
 # Initialize with custom config
 ta = TradingAgentsGraph(debug=True, config=config)
 
-# forward propagate
+# forward propagate (use a crypto ticker when testing execution)
 _, decision = ta.propagate("NVDA", "2026-09-01")
 print(decision)

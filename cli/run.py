@@ -96,6 +96,15 @@ def _build_run_config(selections: dict, checkpoint: bool | None) -> dict:
     return config
 
 
+def _apply_execution_flag(config: dict, execute: bool | None) -> dict:
+    """Honour ``--execute/--no-execute`` over the env default."""
+    if execute is None:
+        return config
+    config.setdefault("execution", {})
+    config["execution"] = {**config["execution"], "enabled": bool(execute)}
+    return config
+
+
 def run_analysis(checkpoint: bool | None = None, portfolio=None, flags=None):
     flags = flags or {}
     # With no terminal nothing can answer a prompt: name every question still
@@ -111,6 +120,7 @@ def run_analysis(checkpoint: bool | None = None, portfolio=None, flags=None):
     selections = get_user_selections(flags)
 
     config = _build_run_config(selections, checkpoint)
+    config = _apply_execution_flag(config, flags.get("execute"))
 
     stats_handler = StatsCallbackHandler()
 
@@ -351,6 +361,15 @@ def run_analysis(checkpoint: bool | None = None, portfolio=None, flags=None):
             # later run starts fresh. A mid-stream failure skips both, keeping
             # the checkpoint for resume.
             graph.record_decision(selections["ticker"], selections["analysis_date"], final_state)
+            execution_result = graph.maybe_execute(final_state)
+            if execution_result is not None:
+                final_state["execution_result"] = {
+                    "ok": execution_result.ok,
+                    "action": execution_result.action,
+                    "symbol": execution_result.symbol,
+                    "order_id": execution_result.order_id,
+                    "detail": execution_result.detail,
+                }
             graph.clear_checkpoint_on_success(
                 selections["ticker"], selections["analysis_date"], selections["asset_type"], portfolio
             )
@@ -388,6 +407,8 @@ def run_analysis(checkpoint: bool | None = None, portfolio=None, flags=None):
     _offer_reports(final_state, graph, selections["ticker"],
                    save=flags.get("save"), show=flags.get("show"), html=flags.get("html"))
 
+    _offer_execution(final_state, graph, flags=flags)
+
 
 def _yes(question: str) -> bool:
     return typer.prompt(question, default="Y").strip().upper() in ("Y", "YES", "")
@@ -421,6 +442,47 @@ def _open_page(page: Path) -> None:
         opened = False
     if not opened:
         console.print(f"  [dim]Could not open a browser; the page is at:[/dim] {page}")
+
+
+def _offer_execution(final_state, graph, flags=None):
+    """Optionally send the decision to bytx (demo by default).
+
+    Already-enabled config (env / --execute) ran inside the graph. Here we only
+    offer a one-shot confirm when the user passed ``--execute`` is unset and
+    execution is still off — never auto-trade live from a prompt alone.
+    """
+    flags = flags or {}
+    exec_cfg = (graph.config or {}).get("execution") or {}
+    already = final_state.get("execution_result")
+    if already:
+        ok = already.get("ok")
+        style = "green" if ok else "red"
+        console.print(
+            f"\n[{style}]Execution:[/{style}] {already.get('action')} "
+            f"{already.get('symbol') or ''} — {already.get('detail')}"
+        )
+        if already.get("order_id"):
+            console.print(f"  [dim]order_id:[/dim] {already['order_id']}")
+        return
+
+    want = flags.get("execute")
+    if want is False or exec_cfg.get("enabled"):
+        return
+    if want is not True:
+        return
+
+    # --execute was set but config was not enabled yet (flag-only path).
+    graph.config.setdefault("execution", {})["enabled"] = True
+    result = graph.maybe_execute(final_state)
+    if result is None:
+        return
+    style = "green" if result.ok else "red"
+    console.print(
+        f"\n[{style}]Execution:[/{style}] {result.action} "
+        f"{result.symbol or ''} — {result.detail}"
+    )
+    if result.order_id:
+        console.print(f"  [dim]order_id:[/dim] {result.order_id}")
 
 
 def _offer_reports(final_state, graph, ticker, save=None, show=None, html=None):

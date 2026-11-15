@@ -41,6 +41,11 @@ dev = [
 bedrock = [
     "langchain-aws>=1.7.9",
 ]
+# Live / demo crypto execution via bytx (BYTtrade SDK).
+# pip install "tradingagents[bytx]"  or  pip install bytx
+bytx = [
+    "bytx>=0.2.1",
+]
 
 [project.scripts]
 tradingagents = "cli.main:app"

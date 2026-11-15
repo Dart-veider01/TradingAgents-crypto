@@ -370,6 +370,30 @@ class TradingAgentsGraph:
             rating=run_rating(final_state),
         )
 
+    def maybe_execute(self, final_state):
+        """Send the finished decision to bytx when ``execution.enabled`` is set.
+
+        Returns an ``ExecutionResult``, or ``None`` when execution is disabled so
+        callers (CLI) can stay quiet on analysis-only runs.
+        """
+        exec_cfg = (self.config or {}).get("execution") or {}
+        if not exec_cfg.get("enabled"):
+            return None
+        from tradingagents.execution import execute_decision
+
+        result = execute_decision(final_state, self.config)
+        if result.ok:
+            logger.info(
+                "Execution %s %s: %s",
+                result.action, result.symbol or "", result.detail,
+            )
+        else:
+            logger.error(
+                "Execution failed (%s %s): %s",
+                result.action, result.symbol or "", result.detail,
+            )
+        return result
+
     def _run_graph(self, company_name, trade_date, asset_type: str = "stock",
                    checkpoint_thread_id: str | None = None, portfolio=None):
         """Execute the graph and write the resulting state to disk and memory log."""
@@ -398,6 +422,17 @@ class TradingAgentsGraph:
             final_state = self.graph.invoke(graph_input, **args)
 
         self.record_decision(company_name, trade_date, final_state)
+
+        # Optional live/demo fill via bytx — off unless execution.enabled.
+        execution_result = self.maybe_execute(final_state)
+        if execution_result is not None:
+            final_state = {**final_state, "execution_result": {
+                "ok": execution_result.ok,
+                "action": execution_result.action,
+                "symbol": execution_result.symbol,
+                "order_id": execution_result.order_id,
+                "detail": execution_result.detail,
+            }}
 
         # Clear checkpoint on successful completion to avoid stale state.
         self.clear_checkpoint_on_success(company_name, trade_date, asset_type, portfolio)

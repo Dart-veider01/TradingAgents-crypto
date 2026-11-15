@@ -31,6 +31,15 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_GOOGLE_THINKING_LEVEL":   "google_thinking_level",
     "TRADINGAGENTS_OPENAI_REASONING_EFFORT": "openai_reasoning_effort",
     "TRADINGAGENTS_ANTHROPIC_EFFORT":        "anthropic_effort",
+    # Live / demo execution via bytx (nested keys applied in build_default_config).
+    "TRADINGAGENTS_EXECUTION_ENABLED":      "execution.enabled",
+    "TRADINGAGENTS_EXECUTION_DEMO":         "execution.demo",
+    "TRADINGAGENTS_EXECUTION_PAPER":        "execution.paper",
+    "TRADINGAGENTS_EXECUTION_EXCHANGE":     "execution.exchange",
+    "TRADINGAGENTS_EXECUTION_MARKET":       "execution.market",
+    "TRADINGAGENTS_EXECUTION_NOTIONAL":     "execution.notional_usdt",
+    "TRADINGAGENTS_EXECUTION_LEVERAGE":     "execution.leverage",
+    "TRADINGAGENTS_EXECUTION_ALLOW_SHORT":  "execution.allow_short",
 }
 
 
@@ -61,6 +70,28 @@ def _coerce(value: str, reference):
     return value
 
 
+def _set_nested(config: dict, dotted_key: str, value) -> None:
+    """Set ``config['a']['b']`` from a dotted key like ``execution.demo``."""
+    parts = dotted_key.split(".")
+    cursor = config
+    for part in parts[:-1]:
+        nxt = cursor.get(part)
+        if not isinstance(nxt, dict):
+            nxt = {}
+            cursor[part] = nxt
+        cursor = nxt
+    cursor[parts[-1]] = value
+
+
+def _nested_get(config: dict, dotted_key: str):
+    cursor = config
+    for part in dotted_key.split("."):
+        if not isinstance(cursor, dict) or part not in cursor:
+            return None
+        cursor = cursor[part]
+    return cursor
+
+
 def _apply_env_overrides(config: dict) -> dict:
     """Apply TRADINGAGENTS_* env vars to the config dict in-place."""
     for env_var, key in _ENV_OVERRIDES.items():
@@ -68,7 +99,11 @@ def _apply_env_overrides(config: dict) -> dict:
         if raw is None or raw == "":
             continue
         try:
-            config[key] = _coerce(raw, config.get(key))
+            if "." in key:
+                reference = _nested_get(config, key)
+                _set_nested(config, key, _coerce(raw, reference))
+            else:
+                config[key] = _coerce(raw, config.get(key))
         except ValueError as exc:
             raise ValueError(f"Invalid value for {env_var}: {exc}") from exc
     return config
@@ -201,6 +236,27 @@ def build_default_config() -> dict:
             ".SZ":  "399001.SZ",   # Shenzhen (SZSE Component)
             ".SA":  "^BVSP",       # B3 Brazil (Ibovespa)
             "":     "SPY",         # default for US-listed tickers (no suffix)
+        },
+
+        # Real / demo trade execution after a finished analysis (bytx driver).
+        # Off by default: analysis still works with no exchange keys.
+        # Demo/paper first — set demo=false only when you explicitly want live funds.
+        "execution": {
+            "enabled": False,
+            "driver": "bytx",
+            "exchange": os.getenv("BYTX_EXCHANGE") or "bybit",
+            "market": "swap",          # "swap" (perp) or "spot"
+            "margin_mode": "cross",    # required by OKX and KuCoin perps
+            "demo": True,              # exchange demo/testnet
+            "paper": False,            # bytx paper book on live order book (no keys)
+            "notional_usdt": 100.0,    # market-order size in quote; raised to the venue minimum when close
+            "risk_usdt": None,         # if set with a valid stop, size by risk (open_position)
+            "leverage": None,          # None = leave exchange default
+            "order_type": "market",    # "limit" uses the trader entry price
+            "post_only_bps": 20,       # a limit this close to the market is sent post-only
+            "allow_short": False,      # Sell closes; True may open a short when flat
+            "quote": "USDT",
+            "require_crypto": True,    # skip equities / non-crypto tickers
         },
 
     })
